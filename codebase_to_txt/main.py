@@ -18,7 +18,7 @@ def get_all_files(
     Args:
         directory: Root directory to search
         recursive: Whether to search subdirectories
-        ignore_patterns: List of patterns to ignore (e.g., ['node_modules', '.git'])
+        sort: Whether to sort the file paths
 
     Returns:
         List of file paths relative to the directory
@@ -182,13 +182,13 @@ def generate_documentation(
             lang = get_language_from_extension(file_path)
 
             # Write to output
-            out.write(f"{file_path}\n")
-            out.write(f"```{lang}\n")
-            out.write(content)
+            _ = out.write(f"{file_path}\n")
+            _ = out.write(f"```{lang}\n")
+            _ = out.write(content)
             # Ensure content ends with newline before closing backticks
             if content and not content.endswith("\n"):
-                out.write("\n")
-            out.write("```\n\n")
+                _ = out.write("\n")
+            _ = out.write("```\n\n")
 
             successful += 1
 
@@ -200,8 +200,8 @@ def generate_documentation(
 
 def main():
     args = ArgumentParser()
-    args.add_argument("--codebase", "-c", help="Codebase directory path")
-    args.add_argument("--output", "-o", help="Output file")
+    _ = args.add_argument("--codebase", "-c", help="Codebase directory path")
+    _ = args.add_argument("--output", "-o", help="Output file")
     args = args.parse_args()
     if not args.codebase:
         print("Error: Codebase directory path is required.")
