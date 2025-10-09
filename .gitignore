@@ -1,0 +1,33 @@
+# Byte-code files
+*.pyc
+__pycache__/
+*.pyd
+*.pyo
+
+# IDE-specific files (e.g., VS Code, PyCharm)
+.vscode/
+.idea/
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer files
+*.whl
+
+# OS-specific files
+.DS_Store # macOS
+Thumbs.db # Windows
+
+# Log files
+*.log
+
+# Database files
+*.sqlite3
