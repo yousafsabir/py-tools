@@ -34,7 +34,6 @@ def get_all_files(
     ]
 
     file_paths: list[str] = []
-    directory = os.path.join(directory, "src")
     directory_path = Path(directory)
 
     if recursive:
@@ -51,9 +50,6 @@ def get_all_files(
         for item in directory_path.iterdir():
             if item.is_file():
                 file_paths.append(item.name)
-
-    for i in range(len(file_paths)):
-        file_paths[i] = "src/" + file_paths[i]
 
     if sort:
         file_paths = sorted(file_paths)
