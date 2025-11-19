@@ -31,6 +31,7 @@ def get_all_files(
         "venv",
         "dist",
         "build",
+        ".next",
     ]
 
     file_paths: list[str] = []
