@@ -5,8 +5,8 @@ Script to list all file paths in a directory and write them to a file.
 
 import os
 import sys
-from pathlib import Path
 from argparse import ArgumentParser
+from pathlib import Path
 
 
 def get_all_files(
@@ -32,6 +32,7 @@ def get_all_files(
         "dist",
         "build",
         ".next",
+        "public",
     ]
 
     file_paths: list[str] = []
