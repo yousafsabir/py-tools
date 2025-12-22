@@ -136,9 +136,7 @@ def read_file_content(file_path: str, base_dir: str = ".") -> str | None:
         return None
 
 
-def generate_documentation(
-    codebase_dir_path: str, output_file: str | None = None
-):
+def generate_documentation(codebase_dir_path: str, output_file: str | None = None):
     """
     Generate documentation with code blocks of a codebase.
 
@@ -153,9 +151,12 @@ def generate_documentation(
         )
         sys.exit(1)
 
+    codebase_dir_path = os.path.abspath(codebase_dir_path)
+
     if not output_file:
-        codebase_dir = os.path.split(codebase_dir_path)
-        output_file = os.path.join(codebase_dir[0], codebase_dir[1] + ".txt")
+        output_file = os.path.join(
+            codebase_dir_path, os.path.split(codebase_dir_path)[1] + ".txt"
+        )
 
     file_paths = get_all_files(directory=codebase_dir_path, recursive=True)
 
@@ -205,9 +206,7 @@ def main():
         print("Error: Codebase directory path is required.")
         sys.exit(1)
 
-    generate_documentation(
-        codebase_dir_path=args.codebase, output_file=args.output
-    )
+    generate_documentation(codebase_dir_path=args.codebase, output_file=args.output)
 
 
 if __name__ == "__main__":
