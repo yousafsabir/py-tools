@@ -202,9 +202,7 @@ def main():
     _ = args.add_argument("--codebase", "-c", help="Codebase directory path")
     _ = args.add_argument("--output", "-o", help="Output file")
     args = args.parse_args()
-    if not args.codebase:
-        print("Error: Codebase directory path is required.")
-        sys.exit(1)
+    args.codebase = args.codebase or os.getcwd()
 
     generate_documentation(codebase_dir_path=args.codebase, output_file=args.output)
 
