@@ -199,12 +199,17 @@ def generate_documentation(codebase_dir_path: str, output_file: str | None = Non
 
 def main():
     args = ArgumentParser()
-    _ = args.add_argument("--codebase", "-c", help="Codebase directory path")
-    _ = args.add_argument("--output", "-o", help="Output file")
+    args.add_argument("--output", "-o", help="Output file")
+    args.add_argument("--codebase", "-c", help="Codebase directory path")
+    args.add_argument("output_pos", nargs="?", help="Output file (positional)")
     args = args.parse_args()
+
+    # Use -o flag if provided, otherwise fall back to positional
+    output_file = args.output or args.output_pos
+
     args.codebase = args.codebase or os.getcwd()
 
-    generate_documentation(codebase_dir_path=args.codebase, output_file=args.output)
+    generate_documentation(codebase_dir_path=args.codebase, output_file=output_file)
 
 
 if __name__ == "__main__":
