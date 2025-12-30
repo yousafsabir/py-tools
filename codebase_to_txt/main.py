@@ -10,7 +10,10 @@ from pathlib import Path
 
 
 def get_all_files(
-    directory: str, recursive: bool = True, sort: bool = False
+    directory: str,
+    recursive: bool = True,
+    sort: bool = False,
+    additional_ignore: list[str] | None = None,
 ) -> list[str]:
     """
     Get all file paths in a directory.
@@ -19,6 +22,7 @@ def get_all_files(
         directory: Root directory to search
         recursive: Whether to search subdirectories
         sort: Whether to sort the file paths
+        additional_ignore: Additional directories to ignore
 
     Returns:
         List of file paths relative to the directory
@@ -34,6 +38,10 @@ def get_all_files(
         ".next",
         "public",
     ]
+
+    # Extend with additional ignore patterns if provided
+    if additional_ignore:
+        ignore_patterns.extend(additional_ignore)
 
     file_paths: list[str] = []
     directory_path = Path(directory)
@@ -136,13 +144,18 @@ def read_file_content(file_path: str, base_dir: str = ".") -> str | None:
         return None
 
 
-def generate_documentation(codebase_dir_path: str, output_file: str | None = None):
+def generate_documentation(
+    codebase_dir_path: str,
+    output_file: str | None = None,
+    omit_dirs: list[str] | None = None,
+):
     """
     Generate documentation with code blocks of a codebase.
 
     Args:
         codebase_dir_path: Base directory where source files are located
         output_file: Output documentation file. If not provided, it will be generated based on the codebase directory name.
+        omit_dirs: Additional directories to ignore
     """
     if not os.path.exists(codebase_dir_path):
         print(
@@ -158,9 +171,13 @@ def generate_documentation(codebase_dir_path: str, output_file: str | None = Non
             codebase_dir_path, os.path.split(codebase_dir_path)[1] + ".txt"
         )
 
-    file_paths = get_all_files(directory=codebase_dir_path, recursive=True)
+    file_paths = get_all_files(
+        directory=codebase_dir_path, recursive=True, additional_ignore=omit_dirs
+    )
 
     print(f"Processing {len(file_paths)} file(s)...")
+    if omit_dirs:
+        print(f"Additional omitted directories: {', '.join(omit_dirs)}")
 
     successful = 0
     skipped = 0
@@ -199,17 +216,29 @@ def generate_documentation(codebase_dir_path: str, output_file: str | None = Non
 
 def main():
     args = ArgumentParser()
-    args.add_argument("--output", "-o", help="Output file")
-    args.add_argument("--codebase", "-c", help="Codebase directory path")
-    args.add_argument("output_pos", nargs="?", help="Output file (positional)")
+    args.add_argument("-r", "--result", help="Output file")
+    args.add_argument("-c", "--codebase", help="Codebase directory path")
+    args.add_argument(
+        "-o",
+        "--omit",
+        help="Comma-separated list of directories to ignore (e.g., '.cache,tmp,logs')",
+    )
+    args.add_argument("result_pos", nargs="?", help="Output file (positional)")
     args = args.parse_args()
 
-    # Use -o flag if provided, otherwise fall back to positional
-    output_file = args.output or args.output_pos
+    # Use -r flag if provided, otherwise fall back to positional
+    output_file = args.result or args.result_pos
 
     args.codebase = args.codebase or os.getcwd()
 
-    generate_documentation(codebase_dir_path=args.codebase, output_file=output_file)
+    # Parse comma-separated omit directories
+    omit_dirs = None
+    if args.omit:
+        omit_dirs = [d.strip() for d in args.omit.split(",")]
+
+    generate_documentation(
+        codebase_dir_path=args.codebase, output_file=output_file, omit_dirs=omit_dirs
+    )
 
 
 if __name__ == "__main__":
