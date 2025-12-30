@@ -22,12 +22,13 @@ def get_all_files(
         directory: Root directory to search
         recursive: Whether to search subdirectories
         sort: Whether to sort the file paths
-        additional_ignore: Additional directories to ignore
+        additional_ignore: Additional directories and files to ignore
 
     Returns:
         List of file paths relative to the directory
     """
     ignore_patterns = [
+        ".env",
         ".git",
         "node_modules",
         "__pycache__",
@@ -55,10 +56,20 @@ def get_all_files(
                 file_path = Path(root) / file
                 # Get relative path from the base directory
                 relative_path = file_path.relative_to(directory_path)
-                file_paths.append(str(relative_path))
+
+                # Check if file or any part of its path matches ignore patterns
+                should_ignore = False
+                for pattern in ignore_patterns:
+                    # Check filename or any directory in the path
+                    if pattern in relative_path.parts or relative_path.name == pattern:
+                        should_ignore = True
+                        break
+
+                if not should_ignore:
+                    file_paths.append(str(relative_path))
     else:
         for item in directory_path.iterdir():
-            if item.is_file():
+            if item.is_file() and item.name not in ignore_patterns:
                 file_paths.append(item.name)
 
     if sort:
@@ -155,7 +166,7 @@ def generate_documentation(
     Args:
         codebase_dir_path: Base directory where source files are located
         output_file: Output documentation file. If not provided, it will be generated based on the codebase directory name.
-        omit_dirs: Additional directories to ignore
+        omit_dirs: Additional directories and files to ignore
     """
     if not os.path.exists(codebase_dir_path):
         print(
@@ -177,7 +188,7 @@ def generate_documentation(
 
     print(f"Processing {len(file_paths)} file(s)...")
     if omit_dirs:
-        print(f"Additional omitted directories: {', '.join(omit_dirs)}")
+        print(f"Additional omitted patterns: {', '.join(omit_dirs)}")
 
     successful = 0
     skipped = 0
@@ -221,7 +232,7 @@ def main():
     args.add_argument(
         "-o",
         "--omit",
-        help="Comma-separated list of directories to ignore (e.g., '.cache,tmp,logs')",
+        help="Comma-separated list of directories/files to ignore (e.g., '.cache,tmp,.env')",
     )
     args.add_argument("result_pos", nargs="?", help="Output file (positional)")
     args = args.parse_args()
