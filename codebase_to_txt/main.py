@@ -9,11 +9,107 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 
+def parse_gitignore(gitignore_path: str) -> list[str]:
+    """
+    Parse a .gitignore file and return list of patterns.
+
+    Args:
+        gitignore_path: Path to the .gitignore file
+
+    Returns:
+        List of patterns to ignore
+    """
+    patterns = []
+
+    try:
+        with open(gitignore_path, "r", encoding="utf-8") as f:
+            for line in f:
+                # Strip whitespace
+                line = line.strip()
+
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
+
+                # Skip negation patterns (lines starting with !)
+                # These would require more complex logic to handle properly
+                if line.startswith("!"):
+                    continue
+
+                # Remove trailing slashes (directory markers)
+                # We treat both files and directories the same for our purposes
+                if line.endswith("/"):
+                    line = line.rstrip("/")
+
+                # Handle leading slashes (match from root only)
+                # For simplicity, we'll strip them and match anywhere
+                if line.startswith("/"):
+                    line = line.lstrip("/")
+
+                # Skip patterns with wildcards for now
+                # You can enhance this to handle glob patterns if needed
+                # For basic use, we'll only add simple directory/file names
+                if "*" not in line and "?" not in line and "[" not in line:
+                    patterns.append(line)
+                else:
+                    # For wildcard patterns, extract meaningful parts
+                    # e.g., "*.pyc" -> "pyc" pattern matching
+                    # This is a simplified approach
+                    if line.startswith("*."):
+                        # Extension pattern like *.pyc, *.log
+                        patterns.append(line)
+                    elif "/" not in line:
+                        # Simple wildcard pattern without path separators
+                        patterns.append(line)
+
+    except Exception as e:
+        print(f"Warning: Could not parse .gitignore: {e}", file=sys.stderr)
+
+    return patterns
+
+
+def should_ignore_path(path: Path, ignore_patterns: list[str]) -> bool:
+    """
+    Check if a path should be ignored based on patterns.
+
+    Args:
+        path: Path to check (relative path)
+        ignore_patterns: List of ignore patterns
+
+    Returns:
+        True if path should be ignored, False otherwise
+    """
+    path_str = str(path)
+    path_parts = path.parts
+
+    for pattern in ignore_patterns:
+        # Check if pattern matches filename
+        if path.name == pattern:
+            return True
+
+        # Check if pattern matches any directory in path
+        if pattern in path_parts:
+            return True
+
+        # Handle extension patterns like *.pyc
+        if pattern.startswith("*."):
+            ext = pattern[1:]  # includes the dot
+            if path_str.endswith(ext):
+                return True
+
+        # Check if pattern is in the path string
+        if pattern in path_str:
+            return True
+
+    return False
+
+
 def get_all_files(
     directory: str,
     recursive: bool = True,
     sort: bool = False,
     additional_ignore: list[str] | None = None,
+    use_gitignore: bool = True,
 ) -> list[str]:
     """
     Get all file paths in a directory.
@@ -23,6 +119,7 @@ def get_all_files(
         recursive: Whether to search subdirectories
         sort: Whether to sort the file paths
         additional_ignore: Additional directories and files to ignore
+        use_gitignore: Whether to parse and use .gitignore file if present
 
     Returns:
         List of file paths relative to the directory
@@ -39,6 +136,15 @@ def get_all_files(
         ".next",
         "public",
     ]
+
+    # Parse .gitignore if it exists and use_gitignore is True
+    if use_gitignore:
+        gitignore_path = Path(directory) / ".gitignore"
+        if gitignore_path.exists():
+            gitignore_patterns = parse_gitignore(str(gitignore_path))
+            if gitignore_patterns:
+                print(f"Loaded {len(gitignore_patterns)} pattern(s) from .gitignore")
+                ignore_patterns.extend(gitignore_patterns)
 
     # Extend with additional ignore patterns if provided
     if additional_ignore:
@@ -57,20 +163,15 @@ def get_all_files(
                 # Get relative path from the base directory
                 relative_path = file_path.relative_to(directory_path)
 
-                # Check if file or any part of its path matches ignore patterns
-                should_ignore = False
-                for pattern in ignore_patterns:
-                    # Check filename or any directory in the path
-                    if pattern in relative_path.parts or relative_path.name == pattern:
-                        should_ignore = True
-                        break
-
-                if not should_ignore:
+                # Check if file should be ignored
+                if not should_ignore_path(relative_path, ignore_patterns):
                     file_paths.append(str(relative_path))
     else:
         for item in directory_path.iterdir():
-            if item.is_file() and item.name not in ignore_patterns:
-                file_paths.append(item.name)
+            if item.is_file():
+                relative_path = item.relative_to(directory_path)
+                if not should_ignore_path(relative_path, ignore_patterns):
+                    file_paths.append(item.name)
 
     if sort:
         file_paths = sorted(file_paths)
@@ -159,6 +260,7 @@ def generate_documentation(
     codebase_dir_path: str,
     output_file: str | None = None,
     omit_dirs: list[str] | None = None,
+    use_gitignore: bool = True,
 ):
     """
     Generate documentation with code blocks of a codebase.
@@ -167,6 +269,7 @@ def generate_documentation(
         codebase_dir_path: Base directory where source files are located
         output_file: Output documentation file. If not provided, it will be generated based on the codebase directory name.
         omit_dirs: Additional directories and files to ignore
+        use_gitignore: Whether to parse and use .gitignore file if present
     """
     if not os.path.exists(codebase_dir_path):
         print(
@@ -183,7 +286,10 @@ def generate_documentation(
         )
 
     file_paths = get_all_files(
-        directory=codebase_dir_path, recursive=True, additional_ignore=omit_dirs
+        directory=codebase_dir_path,
+        recursive=True,
+        additional_ignore=omit_dirs,
+        use_gitignore=use_gitignore,
     )
 
     print(f"Processing {len(file_paths)} file(s)...")
@@ -234,6 +340,11 @@ def main():
         "--omit",
         help="Comma-separated list of directories/files to ignore (e.g., '.cache,tmp,.env')",
     )
+    args.add_argument(
+        "--no-gitignore",
+        action="store_true",
+        help="Disable .gitignore parsing",
+    )
     args.add_argument("result_pos", nargs="?", help="Output file (positional)")
     args = args.parse_args()
 
@@ -248,7 +359,10 @@ def main():
         omit_dirs = [d.strip() for d in args.omit.split(",")]
 
     generate_documentation(
-        codebase_dir_path=args.codebase, output_file=output_file, omit_dirs=omit_dirs
+        codebase_dir_path=args.codebase,
+        output_file=output_file,
+        omit_dirs=omit_dirs,
+        use_gitignore=not args.no_gitignore,
     )
 
 
